@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Fallback: Wenn CRLF erkannt → konvertieren & neu starten
+if file "$0" | grep -q CRLF; then
+  echo "Konvertiere Windows-Zeilenenden (CRLF → LF)..."
+  dos2unix "$0"
+  exec "$0" "$@"
+fi
+
 #Skript für openSUSE Tumbleweed um den SSH-Zugriff dauerhaft ermöglichen
 #jetzt kompatibel mit NetworkManager & Wicked
 
