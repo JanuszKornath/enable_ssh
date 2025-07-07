@@ -15,12 +15,12 @@ interface=""
 
 if systemctl is-active --quiet NetworkManager; then
     echo "➡ NetworkManager aktiv – verwende nmcli..."
-    interface=$(nmcli device status | awk '$3 == "connected" {print $1}' | head -n1)
+    interface=$(nmcli device status | awk '$3 == "connected" && $1 != "lo" {print $1}' | head -n1)
 fi
-
+#Wenn nichts gefunden → Wicked (oder IP-Fallback)
 if [ -z "$interface" ]; then
     echo "➡ Versuche Wicked (ip/ifstatus)..."
-    interface=$(ip -o -4 addr show up | awk '{print $2}' | grep -v lo | head -n1)
+    interface=$(ip -o -4 addr show up | awk '$2 != "lo" {print $2}' | head -n1)
 fi
 
 if [ -z "$interface" ]; then
