@@ -1,16 +1,31 @@
 #!/bin/bash
 
 #Skript für openSUSE Tumbleweed um den SSH-Zugriff dauerhaft ermöglichen
+#jetzt kompatibel mit NetworkManager & Wicked
 
 #Fehlerbehandlung
 set -e
 
+echo "=== SSH-Zugriff einrichten ==="
+
 #Netzwerkschnittstelle ermitteln
-interface=$(nmcli device status | awk '$3 == "connected" {print $1}' | head -n1)
+echo "Ermittle aktive Netzwerkschnittstelle..."
+
+interface=""
+
+if systemctl is-active --quiet NetworkManager; then
+    echo "➡ NetworkManager aktiv – verwende nmcli..."
+    interface=$(nmcli device status | awk '$3 == "connected" {print $1}' | head -n1)
+fi
 
 if [ -z "$interface" ]; then
-  echo "Keine aktive Netzwerkschnittstelle gefunden."
-  exit 1
+    echo "➡ Versuche Wicked (ip/ifstatus)..."
+    interface=$(ip -o -4 addr show up | awk '{print $2}' | grep -v lo | head -n1)
+fi
+
+if [ -z "$interface" ]; then
+    echo "Keine aktive Netzwerkschnittstelle gefunden."
+    exit 1
 fi
 
 echo "Verwendete Netzwerkschnittstelle: $interface"
@@ -38,7 +53,11 @@ fi
 #SSH-Dienst aktivieren und starten
 echo "Aktiviere und starte sshd..."
 sudo systemctl enable sshd
-sudo systemctl start sshd
+sudo systemctl start sshd || {
+    echo "Fehler beim Start von sshd."
+    echo "Details: sudo journalctl -xeu sshd"
+    exit 1
+}
 
 #Statusprüfung
 sudo systemctl status sshd --no-pager
